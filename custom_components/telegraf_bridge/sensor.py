@@ -18,7 +18,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, SIGNAL_NEW_ENTITY
+from .const import DOMAIN, SIGNAL_NEW_ENTITY, VALIDATION_NAME_SUFFIX
 from .coordinator import TelegrafBridgeCoordinator, signal_update
 from .descriptions import describe_metric
 
@@ -62,7 +62,7 @@ class TelegrafBridgeSensor(SensorEntity):
         self._attr_device_info = coordinator.device_info_for(host_id)
 
         description, _gpu_index = describe_metric(metric)
-        self._attr_name = description.label
+        self._attr_name = f"{description.label}{VALIDATION_NAME_SUFFIX}"
         self._attr_icon = description.icon
         self._attr_native_unit_of_measurement = description.unit
         self._attr_device_class = (
