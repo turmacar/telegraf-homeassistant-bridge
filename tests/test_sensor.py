@@ -221,7 +221,7 @@ class SensorAttributesTests(unittest.TestCase):
     def test_unique_id_and_basic_attributes(self):
         entity = sensor_module.TelegrafBridgeSensor(self.coordinator, "tower", "cpu_usage")
         self.assertEqual(entity._attr_unique_id, "tower_cpu_usage")
-        self.assertEqual(entity._attr_name, "CPU Usage (Integration)")
+        self.assertEqual(entity._attr_name, "CPU Usage")
         self.assertEqual(entity._attr_native_unit_of_measurement, "%")
         self.assertIsNone(entity._attr_device_class)
         self.assertEqual(entity._attr_state_class, "measurement")
@@ -229,7 +229,7 @@ class SensorAttributesTests(unittest.TestCase):
     def test_gpu_indexed_metric_gets_per_gpu_label(self):
         entity = sensor_module.TelegrafBridgeSensor(self.coordinator, "tower", "gpu0_temp")
         self.assertEqual(entity._attr_unique_id, "tower_gpu0_temp")
-        self.assertEqual(entity._attr_name, "GPU 0 Temperature (Integration)")
+        self.assertEqual(entity._attr_name, "GPU 0 Temperature")
         self.assertEqual(entity._attr_device_class, "temperature")
 
     def test_native_value_reflects_coordinator_state(self):
@@ -294,9 +294,9 @@ class SetupEntryTests(unittest.IsolatedAsyncioTestCase):
 class EntityIdCompatibilityTests(unittest.TestCase):
     """Verify device-name + entity-name slugs match the existing
     MQTT-discovery-derived entity_ids (Phase 0 decision), for the metrics
-    that kept flat naming, PLUS the Phase 7 VALIDATION_NAME_SUFFIX so
-    entities can run alongside Node-RED's during parallel validation without
-    colliding. GPU metrics intentionally changed separately - see TODO."""
+    that kept flat naming. VALIDATION_NAME_SUFFIX defaults to "" post-cutover
+    (Phase 8, 2026-08-28) - these assert the final clean entity_ids. GPU
+    metrics intentionally changed separately - see TODO."""
 
     def setUp(self):
         self.hass = make_hass()
@@ -309,32 +309,30 @@ class EntityIdCompatibilityTests(unittest.TestCase):
         return simple_slugify(f"{hostname} {entity._attr_name}")
 
     def test_tower_cpu_usage(self):
-        self.assertEqual(
-            self._slug_for("Tower", "tower", "cpu_usage"), "tower_cpu_usage_integration"
-        )
+        self.assertEqual(self._slug_for("Tower", "tower", "cpu_usage"), "tower_cpu_usage")
 
     def test_desktop_strix_ram_usage(self):
         self.assertEqual(
             self._slug_for("Desktop-STRIX", "desktop_strix", "ram_usage"),
-            "desktop_strix_ram_usage_integration",
+            "desktop_strix_ram_usage",
         )
 
     def test_framework_13_battery(self):
         self.assertEqual(
             self._slug_for("Framework_13", "framework_13", "battery"),
-            "framework_13_battery_integration",
+            "framework_13_battery",
         )
 
     def test_pihole_cpu_temp(self):
         self.assertEqual(
             self._slug_for("pihole", "pihole", "cpu_temp"),
-            "pihole_cpu_temperature_integration",
+            "pihole_cpu_temperature",
         )
 
     def test_openwrt_dns_latency(self):
         self.assertEqual(
             self._slug_for("openwrt", "openwrt", "dns_latency"),
-            "openwrt_dns_latency_integration",
+            "openwrt_dns_latency",
         )
 
 
