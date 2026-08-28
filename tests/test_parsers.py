@@ -89,13 +89,13 @@ class ParseDockerTests(unittest.TestCase):
 
 
 class ParseNvidiaSmiTests(unittest.TestCase):
-    def test_single_gpu_uses_flat_keys(self):
+    def test_single_gpu_is_keyed_by_its_index(self):
         payload = item("nvidia_smi_desktop")
-        result = parse_nvidia_smi(payload["tags"], payload["fields"], multi_gpu=False)
-        self.assertEqual(result["gpu_temp"], round(payload["fields"]["temperature_gpu"], 1))
-        self.assertEqual(result["gpu_usage"], round(payload["fields"]["utilization_gpu"], 1))
-        self.assertEqual(result["gpu_vram_used"], round(payload["fields"]["memory_used"]))
-        self.assertEqual(result["gpu_name"], "GeForce RTX 3070 Ti")
+        result = parse_nvidia_smi(payload["tags"], payload["fields"])
+        self.assertEqual(result["gpu0_temp"], round(payload["fields"]["temperature_gpu"], 1))
+        self.assertEqual(result["gpu0_usage"], round(payload["fields"]["utilization_gpu"], 1))
+        self.assertEqual(result["gpu0_vram_used"], round(payload["fields"]["memory_used"]))
+        self.assertEqual(result["gpu0_name"], "GeForce RTX 3070 Ti")
 
     def test_multi_gpu_uses_indexed_keys(self):
         gpu0 = item("nvidia_smi_tower", 0)
@@ -103,8 +103,8 @@ class ParseNvidiaSmiTests(unittest.TestCase):
         self.assertEqual(gpu0["tags"]["index"], "0")
         self.assertEqual(gpu1["tags"]["index"], "1")
 
-        result0 = parse_nvidia_smi(gpu0["tags"], gpu0["fields"], multi_gpu=True)
-        result1 = parse_nvidia_smi(gpu1["tags"], gpu1["fields"], multi_gpu=True)
+        result0 = parse_nvidia_smi(gpu0["tags"], gpu0["fields"])
+        result1 = parse_nvidia_smi(gpu1["tags"], gpu1["fields"])
         self.assertIn("gpu0_temp", result0)
         self.assertIn("gpu1_temp", result1)
         self.assertNotIn("gpu1_temp", result0)

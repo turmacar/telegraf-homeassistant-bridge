@@ -12,9 +12,8 @@ single-message `parse_measurement` dispatcher below - the coordinator
 (Phase 3) owns that state and calls `parse_net_rate` / `parse_dns_query_sample`
 directly.
 
-Multi-GPU detection is likewise owned by the coordinator (it tracks distinct
-`tags["index"]` values seen per host at runtime) and passed in via
-`multi_gpu`.
+`nvidia_smi` always keys metrics by `tags["index"]` (gpu0_temp, gpu1_temp,
+...), even for single-GPU hosts - no multi-GPU auto-detection state needed.
 """
 
 from __future__ import annotations
@@ -67,11 +66,10 @@ def parse_docker(fields: dict) -> dict[str, MetricValue]:
     return {"docker_running": running}
 
 
-def parse_nvidia_smi(
-    tags: dict, fields: dict, *, multi_gpu: bool = False
-) -> dict[str, MetricValue]:
-    """GPU temp/usage/vram/name. Multi-GPU hosts get gpu{index}_* keys."""
-    prefix = f"gpu{tags.get('index')}_" if multi_gpu else "gpu_"
+def parse_nvidia_smi(tags: dict, fields: dict) -> dict[str, MetricValue]:
+    """GPU temp/usage/vram/name, keyed by tags.index (always gpu{index}_*,
+    even for single-GPU hosts - simpler than tracking multi-GPU state)."""
+    prefix = f"gpu{tags.get('index')}_"
     result: dict[str, MetricValue] = {}
     if fields.get("temperature_gpu") is not None:
         result[f"{prefix}temp"] = round(fields["temperature_gpu"], 1)
@@ -136,8 +134,6 @@ def parse_measurement(
     measurement: str,
     tags: dict,
     fields: dict,
-    *,
-    multi_gpu: bool = False,
 ) -> dict[str, MetricValue]:
     """Dispatch a single telegraf item to the matching parser."""
     if measurement == "cpu":
@@ -151,7 +147,7 @@ def parse_measurement(
     if measurement == "docker":
         return parse_docker(fields)
     if measurement == "nvidia_smi":
-        return parse_nvidia_smi(tags, fields, multi_gpu=multi_gpu)
+        return parse_nvidia_smi(tags, fields)
     if measurement == "sensors":
         return parse_sensors(tags, fields)
     if measurement == "temp":
