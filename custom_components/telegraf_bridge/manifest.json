@@ -1,0 +1,12 @@
+{
+    "domain": "telegraf_bridge",
+    "name": "Telegraf Bridge",
+    "version": "0.1.0",
+    "documentation": "https://github.com/turmacar/telegraf-homeassistant-bridge/blob/main/README.md",
+    "issue_tracker": "https://github.com/turmacar/telegraf-homeassistant-bridge/issues",
+    "codeowners": ["@turmacar"],
+    "dependencies": ["mqtt"],
+    "iot_class": "local_push",
+    "integration_type": "hub",
+    "config_flow": true
+}

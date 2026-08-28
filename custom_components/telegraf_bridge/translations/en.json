@@ -1,0 +1,27 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Telegraf Bridge",
+                "description": "Requires the core MQTT integration to already be configured.",
+                "data": {
+                    "topic": "MQTT topic prefix"
+                }
+            }
+        },
+        "abort": {
+            "mqtt_not_configured": "The core MQTT integration must be set up first.",
+            "already_configured": "Telegraf Bridge is already configured."
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Telegraf Bridge Options",
+                "data": {
+                    "host": "Host to override"
+                }
+            }
+        }
+    }
+}
