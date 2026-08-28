@@ -102,12 +102,17 @@ class TelegrafBridgeCoordinator:
             self._unsub_interval()
 
     def device_info_for(self, host_id: str) -> DeviceInfo:
-        """One DeviceInfo per host_id. Name is the raw hostname (not host_id)
-        so HA's entity_id slugification matches the existing sensor.<host>_*
-        naming - see repo memory ha-mqtt-discovery-entity-id.md."""
+        """One DeviceInfo per host_id. Name defaults to the raw hostname (not
+        host_id) so HA's entity_id slugification matches the existing
+        sensor.<host>_* naming - see repo memory ha-mqtt-discovery-entity-id.md.
+        Manufacturer/model/name can be overridden via the Options Flow
+        (stored in `entry.options["host_overrides"][host_id]`)."""
+        override = self.entry.options.get("host_overrides", {}).get(host_id, {})
         return DeviceInfo(
             identifiers={(DOMAIN, host_id)},
-            name=self.hostnames.get(host_id, host_id),
+            name=override.get("name") or self.hostnames.get(host_id, host_id),
+            manufacturer=override.get("manufacturer") or None,
+            model=override.get("model") or None,
         )
 
     @callback

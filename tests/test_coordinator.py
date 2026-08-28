@@ -166,8 +166,8 @@ def make_hass():
     return hass
 
 
-def make_entry(entry_id="entry-1", data=None):
-    return types.SimpleNamespace(entry_id=entry_id, data=data or {})
+def make_entry(entry_id="entry-1", data=None, options=None):
+    return types.SimpleNamespace(entry_id=entry_id, data=data or {}, options=options or {})
 
 
 class CoordinatorSetupTests(unittest.IsolatedAsyncioTestCase):
@@ -295,6 +295,17 @@ class DeviceInfoTests(unittest.TestCase):
         coordinator.hostnames["desktop_strix"] = "Desktop-STRIX"
         info = coordinator.device_info_for("desktop_strix")
         self.assertEqual(info["name"], "Desktop-STRIX")
+
+    def test_options_override_manufacturer_model_and_name(self):
+        entry = make_entry(
+            options={"host_overrides": {"tower": {"manufacturer": "Unraid", "model": "Server", "name": "Tower NAS"}}}
+        )
+        coordinator = coordinator_module.TelegrafBridgeCoordinator(make_hass(), entry)
+        coordinator.hostnames["tower"] = "Tower"
+        info = coordinator.device_info_for("tower")
+        self.assertEqual(info["name"], "Tower NAS")
+        self.assertEqual(info["manufacturer"], "Unraid")
+        self.assertEqual(info["model"], "Server")
 
 
 if __name__ == "__main__":

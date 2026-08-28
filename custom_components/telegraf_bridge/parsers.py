@@ -12,8 +12,7 @@ single-message `parse_measurement` dispatcher below - the coordinator
 (Phase 3) owns that state and calls `parse_net_rate` / `parse_dns_query_sample`
 directly.
 
-`nvidia_smi` always keys metrics by `tags["index"]` (gpu0_temp, gpu1_temp,
-...), even for single-GPU hosts - no multi-GPU auto-detection state needed.
+`nvidia_smi` keys metrics by `tags["index"]` (gpu0_temp, gpu1_temp,...).
 """
 
 from __future__ import annotations
