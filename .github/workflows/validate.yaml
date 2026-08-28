@@ -18,3 +18,5 @@ jobs:
         uses: "hacs/action@main"
         with:
           category: "integration"
+          # brands assets are only required for the official HACS default
+          ignore: "brands"
