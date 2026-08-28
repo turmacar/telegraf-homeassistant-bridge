@@ -170,9 +170,9 @@ def parse_net_rate(
     *,
     now: float,
 ) -> tuple[dict[str, MetricValue], NetSample | None]:
-    """WAN download/upload rate for openwrt's eth0, from cumulative byte
-    counters between messages. Caller (coordinator) owns `previous` per host
-    and must persist the returned NetSample for the next call."""
+    """WAN download/upload rate for a host's eth0 interface, from cumulative
+    byte counters between messages. Caller (coordinator) owns `previous` per
+    host and must persist the returned NetSample for the next call."""
     if tags.get("interface") != "eth0":
         return {}, previous
 

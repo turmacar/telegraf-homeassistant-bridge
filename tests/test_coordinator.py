@@ -197,13 +197,13 @@ class CoordinatorSetupTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_async_setup_recreates_entities_from_storage(self):
         coordinator = coordinator_module.TelegrafBridgeCoordinator(make_hass(), make_entry())
-        coordinator.store._data = {"known_pairs": [["tower", "cpu_usage"]]}
+        coordinator.store._data = {"known_pairs": [["server", "cpu_usage"]]}
         await coordinator.async_setup()
 
-        self.assertIn(("tower", "cpu_usage"), coordinator.known_pairs)
-        self.assertFalse(coordinator.is_available("tower", "cpu_usage"))
+        self.assertIn(("server", "cpu_usage"), coordinator.known_pairs)
+        self.assertFalse(coordinator.is_available("server", "cpu_usage"))
         new_entity_sends = [s for s in recorder.dispatcher_sends if s[0] == "telegraf_bridge_new_entity"]
-        self.assertEqual(new_entity_sends[0][1], ("tower", "cpu_usage"))
+        self.assertEqual(new_entity_sends[0][1], ("server", "cpu_usage"))
 
 
 class ProcessMessageTests(unittest.IsolatedAsyncioTestCase):
@@ -217,14 +217,14 @@ class ProcessMessageTests(unittest.IsolatedAsyncioTestCase):
         payload = json.dumps(
             {"fields": {"usage_idle": 80}, "tags": {"cpu": "cpu-total"}, "name": "cpu"}
         )
-        await self.coordinator._async_process_message("systems/Tower/cpu", payload)
+        await self.coordinator._async_process_message("systems/Server/cpu", payload)
 
-        self.assertIn(("tower", "cpu_usage"), self.coordinator.known_pairs)
-        self.assertEqual(self.coordinator.metrics[("tower", "cpu_usage")].value, 20)
-        self.assertTrue(self.coordinator.is_available("tower", "cpu_usage"))
+        self.assertIn(("server", "cpu_usage"), self.coordinator.known_pairs)
+        self.assertEqual(self.coordinator.metrics[("server", "cpu_usage")].value, 20)
+        self.assertTrue(self.coordinator.is_available("server", "cpu_usage"))
         signals = [s[0] for s in recorder.dispatcher_sends]
         self.assertIn("telegraf_bridge_new_entity", signals)
-        self.assertIn("telegraf_bridge_update_tower_cpu_usage", signals)
+        self.assertIn("telegraf_bridge_update_server_cpu_usage", signals)
 
     async def test_second_message_for_known_pair_only_sends_update_signal(self):
         import json
@@ -232,13 +232,13 @@ class ProcessMessageTests(unittest.IsolatedAsyncioTestCase):
         payload = json.dumps(
             {"fields": {"usage_idle": 80}, "tags": {"cpu": "cpu-total"}, "name": "cpu"}
         )
-        await self.coordinator._async_process_message("systems/Tower/cpu", payload)
+        await self.coordinator._async_process_message("systems/Server/cpu", payload)
         recorder.dispatcher_sends.clear()
-        await self.coordinator._async_process_message("systems/Tower/cpu", payload)
+        await self.coordinator._async_process_message("systems/Server/cpu", payload)
 
         signals = [s[0] for s in recorder.dispatcher_sends]
         self.assertNotIn("telegraf_bridge_new_entity", signals)
-        self.assertIn("telegraf_bridge_update_tower_cpu_usage", signals)
+        self.assertIn("telegraf_bridge_update_server_cpu_usage", signals)
 
     async def test_nvidia_smi_keys_metrics_by_gpu_index(self):
         import json
@@ -257,12 +257,12 @@ class ProcessMessageTests(unittest.IsolatedAsyncioTestCase):
                 "name": "nvidia_smi",
             }
         )
-        await self.coordinator._async_process_message("systems/Tower/nvidia_smi", gpu0)
-        self.assertIn(("tower", "gpu0_temp"), self.coordinator.known_pairs)
+        await self.coordinator._async_process_message("systems/Server/nvidia_smi", gpu0)
+        self.assertIn(("server", "gpu0_temp"), self.coordinator.known_pairs)
 
-        await self.coordinator._async_process_message("systems/Tower/nvidia_smi", gpu1)
-        self.assertIn(("tower", "gpu0_temp"), self.coordinator.known_pairs)
-        self.assertIn(("tower", "gpu1_temp"), self.coordinator.known_pairs)
+        await self.coordinator._async_process_message("systems/Server/nvidia_smi", gpu1)
+        self.assertIn(("server", "gpu0_temp"), self.coordinator.known_pairs)
+        self.assertIn(("server", "gpu1_temp"), self.coordinator.known_pairs)
 
 
     async def test_dns_query_averages_after_window_fills(self):
@@ -272,12 +272,12 @@ class ProcessMessageTests(unittest.IsolatedAsyncioTestCase):
             {"fields": {"query_time_ms": 10.0}, "tags": {"server": "1.1.1.1"}, "name": "dns_query"}
         )
         for _ in range(4):
-            await self.coordinator._async_process_message("systems/openwrt/dns_query", payload)
-        self.assertNotIn(("openwrt", "dns_latency"), self.coordinator.known_pairs)
+            await self.coordinator._async_process_message("systems/router/dns_query", payload)
+        self.assertNotIn(("router", "dns_latency"), self.coordinator.known_pairs)
 
-        await self.coordinator._async_process_message("systems/openwrt/dns_query", payload)
-        self.assertIn(("openwrt", "dns_latency"), self.coordinator.known_pairs)
-        self.assertEqual(self.coordinator.metrics[("openwrt", "dns_latency")].value, 10)
+        await self.coordinator._async_process_message("systems/router/dns_query", payload)
+        self.assertIn(("router", "dns_latency"), self.coordinator.known_pairs)
+        self.assertEqual(self.coordinator.metrics[("router", "dns_latency")].value, 10)
 
     async def test_net_rate_needs_two_samples(self):
         import json
@@ -289,33 +289,33 @@ class ProcessMessageTests(unittest.IsolatedAsyncioTestCase):
                 "name": "net",
             }
         )
-        await self.coordinator._async_process_message("systems/openwrt/net", payload)
-        self.assertNotIn(("openwrt", "wan_rx_mbps"), self.coordinator.known_pairs)
+        await self.coordinator._async_process_message("systems/router/net", payload)
+        self.assertNotIn(("router", "wan_rx_mbps"), self.coordinator.known_pairs)
 
     async def test_short_topic_is_ignored(self):
-        await self.coordinator._async_process_message("systems/Tower", "{}")
+        await self.coordinator._async_process_message("systems/Server", "{}")
         self.assertEqual(self.coordinator.known_pairs, set())
 
     async def test_invalid_json_is_ignored(self):
-        await self.coordinator._async_process_message("systems/Tower/cpu", "not json")
+        await self.coordinator._async_process_message("systems/Server/cpu", "not json")
         self.assertEqual(self.coordinator.known_pairs, set())
 
 
 class DeviceInfoTests(unittest.TestCase):
     def test_device_info_uses_raw_hostname(self):
         coordinator = coordinator_module.TelegrafBridgeCoordinator(make_hass(), make_entry())
-        coordinator.hostnames["desktop_strix"] = "Desktop-STRIX"
-        info = coordinator.device_info_for("desktop_strix")
-        self.assertEqual(info["name"], "Desktop-STRIX")
+        coordinator.hostnames["desktop"] = "Desktop"
+        info = coordinator.device_info_for("desktop")
+        self.assertEqual(info["name"], "Desktop")
 
     def test_options_override_manufacturer_model_and_name(self):
         entry = make_entry(
-            options={"host_overrides": {"tower": {"manufacturer": "Unraid", "model": "Server", "name": "Tower NAS"}}}
+            options={"host_overrides": {"server": {"manufacturer": "Unraid", "model": "Server", "name": "Server NAS"}}}
         )
         coordinator = coordinator_module.TelegrafBridgeCoordinator(make_hass(), entry)
-        coordinator.hostnames["tower"] = "Tower"
-        info = coordinator.device_info_for("tower")
-        self.assertEqual(info["name"], "Tower NAS")
+        coordinator.hostnames["server"] = "Server"
+        info = coordinator.device_info_for("server")
+        self.assertEqual(info["name"], "Server NAS")
         self.assertEqual(info["manufacturer"], "Unraid")
         self.assertEqual(info["model"], "Server")
 

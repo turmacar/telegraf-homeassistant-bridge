@@ -20,8 +20,8 @@ STORAGE_KEY = DOMAIN
 STALE_AFTER_SECONDS = 90
 STALENESS_CHECK_INTERVAL_SECONDS = 30
 
-# openwrt's dns_query publishes one message per resolver, not a batch -
-# average the last N samples per host into a single dns_latency reading.
+# dns_query publishes one message per resolver, not a batch - average the
+# last N samples per host into a single dns_latency reading.
 DNS_QUERY_WINDOW_SIZE = 5
 
 # Optional suffix appended to every entity's display name (and therefore its

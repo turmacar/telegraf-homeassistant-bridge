@@ -7,7 +7,7 @@ json.loads'd) for a given measurement/host/tag combination.
 """
 
 PAYLOADS = {
-    "cpu_tower": [
+    "cpu_server": [
         {
             "fields": {
                 "usage_guest": 0,
@@ -24,12 +24,12 @@ PAYLOADS = {
             "name": "cpu",
             "tags": {
                 "cpu": "cpu-total",
-                "host": "Tower"
+                "host": "Server"
             },
             "timestamp": 1787941820
         }
     ],
-    "cpu_openwrt": [
+    "cpu_router": [
         {
             "fields": {
                 "usage_guest": 0,
@@ -46,12 +46,12 @@ PAYLOADS = {
             "name": "cpu",
             "tags": {
                 "cpu": "cpu-total",
-                "host": "openwrt"
+                "host": "router"
             },
             "timestamp": 1787941800
         }
     ],
-    "mem_framework": [
+    "mem_laptop": [
         {
             "fields": {
                 "active": 8052920320,
@@ -91,12 +91,12 @@ PAYLOADS = {
             },
             "name": "mem",
             "tags": {
-                "host": "Framework_13"
+                "host": "Laptop"
             },
             "timestamp": 1787941830
         }
     ],
-    "disk_root_tower": [
+    "disk_root_server": [
         {
             "fields": {
                 "free": 30062682112,
@@ -112,14 +112,14 @@ PAYLOADS = {
             "tags": {
                 "device": "rootfs",
                 "fstype": "rootfs",
-                "host": "Tower",
+                "host": "Server",
                 "mode": "rw",
                 "path": "/"
             },
             "timestamp": 1787941820
         }
     ],
-    "disk_root_framework": [
+    "disk_root_laptop": [
         {
             "fields": {
                 "free": 1587975618560,
@@ -135,14 +135,14 @@ PAYLOADS = {
             "tags": {
                 "device": "nvme0n1p2",
                 "fstype": "btrfs",
-                "host": "Framework_13",
+                "host": "Laptop",
                 "mode": "rw",
                 "path": "/"
             },
             "timestamp": 1787941830
         }
     ],
-    "system_load_tower": [
+    "system_load_server": [
         {
             "fields": {
                 "load1": 5.95,
@@ -155,36 +155,36 @@ PAYLOADS = {
             },
             "name": "system",
             "tags": {
-                "host": "Tower"
+                "host": "Server"
             },
             "timestamp": 1787941820
         }
     ],
-    "system_uptime_tower": [
+    "system_uptime_server": [
         {
             "fields": {
                 "uptime": 3966433
             },
             "name": "system",
             "tags": {
-                "host": "Tower"
+                "host": "Server"
             },
             "timestamp": 1787941820
         }
     ],
-    "system_uptime_format_tower": [
+    "system_uptime_format_server": [
         {
             "fields": {
                 "uptime_format": "45 days, 21:47"
             },
             "name": "system",
             "tags": {
-                "host": "Tower"
+                "host": "Server"
             },
             "timestamp": 1787941820
         }
     ],
-    "docker_tower": [
+    "docker_server": [
         {
             "fields": {
                 "n_containers": 97,
@@ -199,14 +199,14 @@ PAYLOADS = {
             },
             "name": "docker",
             "tags": {
-                "engine_host": "Tower",
-                "host": "Tower",
+                "engine_host": "Server",
+                "host": "Server",
                 "server_version": "29.5.3"
             },
             "timestamp": 1787941820
         }
     ],
-    "nvidia_smi_tower": [
+    "nvidia_smi_server": [
         {
             "fields": {
                 "clocks_current_graphics": 139,
@@ -242,7 +242,7 @@ PAYLOADS = {
             "tags": {
                 "arch": "Pascal",
                 "compute_mode": "Default",
-                "host": "Tower",
+                "host": "Server",
                 "index": "0",
                 "name": "NVIDIA GeForce GTX 1050 Ti",
                 "pstate": "P8",
@@ -286,7 +286,7 @@ PAYLOADS = {
             "tags": {
                 "arch": "Pascal",
                 "compute_mode": "Default",
-                "host": "Tower",
+                "host": "Server",
                 "index": "1",
                 "name": "NVIDIA GeForce GTX 1070",
                 "pstate": "P8",
@@ -336,7 +336,7 @@ PAYLOADS = {
             "tags": {
                 "arch": "Ampere",
                 "compute_mode": "Default",
-                "host": "Desktop-STRIX",
+                "host": "Desktop",
                 "index": "0",
                 "name": "NVIDIA GeForce RTX 3070 Ti",
                 "pstate": "P8",
@@ -354,12 +354,12 @@ PAYLOADS = {
             "tags": {
                 "chip": "k10temp-pci-00c3",
                 "feature": "tctl",
-                "host": "Desktop-STRIX"
+                "host": "Desktop"
             },
             "timestamp": 1787941820
         }
     ],
-    "sensors_framework": [
+    "sensors_laptop": [
         {
             "fields": {
                 "in_input": 0.75
@@ -368,7 +368,7 @@ PAYLOADS = {
             "tags": {
                 "chip": "amdgpu-pci-c100",
                 "feature": "vddgfx",
-                "host": "Framework_13"
+                "host": "Laptop"
             },
             "timestamp": 1787941830
         },
@@ -380,7 +380,7 @@ PAYLOADS = {
             "tags": {
                 "chip": "amdgpu-pci-c100",
                 "feature": "vddnb",
-                "host": "Framework_13"
+                "host": "Laptop"
             },
             "timestamp": 1787941830
         },
@@ -392,19 +392,19 @@ PAYLOADS = {
             "tags": {
                 "chip": "amdgpu-pci-c100",
                 "feature": "edge",
-                "host": "Framework_13"
+                "host": "Laptop"
             },
             "timestamp": 1787941830
         }
     ],
-    "temp_ha_pi": [
+    "temp_raspberrypi": [
         {
             "fields": {
                 "temp": 54.55
             },
             "name": "temp",
             "tags": {
-                "host": "ha-pi",
+                "host": "raspberrypi",
                 "sensor": "cpu_thermal"
             },
             "timestamp": 1787941830
@@ -415,20 +415,20 @@ PAYLOADS = {
             },
             "name": "temp",
             "tags": {
-                "host": "ha-pi",
+                "host": "raspberrypi",
                 "sensor": "rp1_adc"
             },
             "timestamp": 1787941830
         }
     ],
-    "temp_pihole": [
+    "temp_raspberrypi2": [
         {
             "fields": {
                 "temp": 49.05
             },
             "name": "temp",
             "tags": {
-                "host": "pihole",
+                "host": "raspberrypi2",
                 "sensor": "cpu_thermal"
             },
             "timestamp": 1787941800
@@ -439,20 +439,20 @@ PAYLOADS = {
             },
             "name": "temp",
             "tags": {
-                "host": "pihole",
+                "host": "raspberrypi2",
                 "sensor": "rp1_adc"
             },
             "timestamp": 1787941800
         }
     ],
-    "temp_tower": [
+    "temp_server": [
         {
             "fields": {
                 "temp": 37.85
             },
             "name": "temp",
             "tags": {
-                "host": "Tower",
+                "host": "Server",
                 "sensor": "nvme_composite"
             },
             "timestamp": 1787941820
@@ -463,7 +463,7 @@ PAYLOADS = {
             },
             "name": "temp",
             "tags": {
-                "host": "Tower",
+                "host": "Server",
                 "sensor": "nvme_sensor_1"
             },
             "timestamp": 1787941820
@@ -474,25 +474,25 @@ PAYLOADS = {
             },
             "name": "temp",
             "tags": {
-                "host": "Tower",
+                "host": "Server",
                 "sensor": "nvme_sensor_2"
             },
             "timestamp": 1787941820
         }
     ],
-    "battery_framework": [
+    "battery_laptop": [
         {
             "fields": {
                 "value": 79
             },
             "name": "battery",
             "tags": {
-                "host": "Framework_13"
+                "host": "Laptop"
             },
             "timestamp": 1787941680
         }
     ],
-    "net_openwrt": [
+    "net_router": [
         {
             "fields": {
                 "bytes_recv": 6453366687186,
@@ -507,13 +507,13 @@ PAYLOADS = {
             },
             "name": "net",
             "tags": {
-                "host": "openwrt",
+                "host": "router",
                 "interface": "eth0"
             },
             "timestamp": 1787941800
         }
     ],
-    "dns_query_openwrt": [
+    "dns_query_router": [
         {
             "fields": {
                 "name": "google.com.",
@@ -524,7 +524,7 @@ PAYLOADS = {
             "name": "dns_query",
             "tags": {
                 "domain": "google.com",
-                "host": "openwrt",
+                "host": "router",
                 "rcode": "NOERROR",
                 "record_type": "A",
                 "result": "success",
@@ -542,7 +542,7 @@ PAYLOADS = {
             "name": "dns_query",
             "tags": {
                 "domain": "google.com",
-                "host": "openwrt",
+                "host": "router",
                 "rcode": "NOERROR",
                 "record_type": "A",
                 "result": "success",
@@ -568,7 +568,7 @@ PAYLOADS = {
             "name": "cpu",
             "tags": {
                 "cpu": "cpu-total",
-                "host": "Desktop-STRIX"
+                "host": "Desktop"
             },
             "timestamp": 1787941820
         }

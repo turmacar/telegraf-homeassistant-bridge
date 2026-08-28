@@ -216,18 +216,18 @@ class EntityLifecycleTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.added_entities, [])
 
         await self._publish(
-            "systems/Tower/cpu",
+            "systems/Server/cpu",
             {"fields": {"usage_idle": 70}, "tags": {"cpu": "cpu-total"}, "name": "cpu"},
         )
 
         self.assertEqual(len(self.added_entities), 1)
         entity = self.added_entities[0]
-        self.assertEqual(entity._attr_unique_id, "tower_cpu_usage")
+        self.assertEqual(entity._attr_unique_id, "server_cpu_usage")
         self.assertEqual(entity.native_value, 30)
 
     async def test_entity_updates_on_subsequent_messages(self):
         await self._publish(
-            "systems/Tower/cpu",
+            "systems/Server/cpu",
             {"fields": {"usage_idle": 70}, "tags": {"cpu": "cpu-total"}, "name": "cpu"},
         )
         entity = self.added_entities[0]
@@ -235,7 +235,7 @@ class EntityLifecycleTests(unittest.IsolatedAsyncioTestCase):
         await entity.async_added_to_hass()
 
         await self._publish(
-            "systems/Tower/cpu",
+            "systems/Server/cpu",
             {"fields": {"usage_idle": 40}, "tags": {"cpu": "cpu-total"}, "name": "cpu"},
         )
 
@@ -246,7 +246,7 @@ class EntityLifecycleTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_entity_goes_unavailable_after_staleness_check(self):
         await self._publish(
-            "systems/Tower/cpu",
+            "systems/Server/cpu",
             {"fields": {"usage_idle": 70}, "tags": {"cpu": "cpu-total"}, "name": "cpu"},
         )
         entity = self.added_entities[0]
@@ -256,7 +256,7 @@ class EntityLifecycleTests(unittest.IsolatedAsyncioTestCase):
 
         # Simulate time passing beyond STALE_AFTER_SECONDS, then the
         # periodic staleness check firing (as async_track_time_interval would).
-        state = self.coordinator.metrics[("tower", "cpu_usage")]
+        state = self.coordinator.metrics[("server", "cpu_usage")]
         state.last_updated -= coordinator_module.STALE_AFTER_SECONDS + 1
         recorder.interval_callback(None)
 
@@ -269,7 +269,7 @@ class EntityLifecycleTests(unittest.IsolatedAsyncioTestCase):
         hass = make_hass()
         entry = make_entry(entry_id="entry-2")
         coordinator = coordinator_module.TelegrafBridgeCoordinator(hass, entry)
-        coordinator.store._data = {"known_pairs": [["tower", "cpu_usage"]]}
+        coordinator.store._data = {"known_pairs": [["server", "cpu_usage"]]}
         await coordinator.async_setup()
         hass.data[coordinator_module.DOMAIN] = {entry.entry_id: coordinator}
 

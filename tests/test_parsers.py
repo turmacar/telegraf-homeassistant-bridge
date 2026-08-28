@@ -36,7 +36,7 @@ def item(key: str, index: int = 0) -> dict:
 
 class ParseCpuTests(unittest.TestCase):
     def test_cpu_total_reports_usage(self):
-        payload = item("cpu_tower")
+        payload = item("cpu_server")
         result = parse_cpu(payload["tags"], payload["fields"])
         self.assertIn("cpu_usage", result)
         self.assertAlmostEqual(result["cpu_usage"], 100 - payload["fields"]["usage_idle"], places=1)
@@ -48,14 +48,14 @@ class ParseCpuTests(unittest.TestCase):
 
 class ParseMemTests(unittest.TestCase):
     def test_ram_usage(self):
-        payload = item("mem_framework")
+        payload = item("mem_laptop")
         result = parse_mem(payload["fields"])
         self.assertEqual(result["ram_usage"], round(payload["fields"]["used_percent"], 1))
 
 
 class ParseDiskTests(unittest.TestCase):
     def test_root_path_reports_usage(self):
-        payload = item("disk_root_tower")
+        payload = item("disk_root_server")
         result = parse_disk(payload["tags"], payload["fields"])
         self.assertEqual(result["disk_root_usage"], round(payload["fields"]["used_percent"], 1))
 
@@ -66,24 +66,24 @@ class ParseDiskTests(unittest.TestCase):
 
 class ParseSystemTests(unittest.TestCase):
     def test_uptime_message(self):
-        payload = item("system_uptime_tower")
+        payload = item("system_uptime_server")
         result = parse_system(payload["fields"])
         self.assertEqual(result, {"uptime": payload["fields"]["uptime"]})
 
     def test_load_only_message_does_not_zero_uptime(self):
-        payload = item("system_load_tower")
+        payload = item("system_load_server")
         result = parse_system(payload["fields"])
         self.assertEqual(result, {})
 
     def test_uptime_format_only_message_ignored(self):
-        payload = item("system_uptime_format_tower")
+        payload = item("system_uptime_format_server")
         result = parse_system(payload["fields"])
         self.assertEqual(result, {})
 
 
 class ParseDockerTests(unittest.TestCase):
     def test_docker_running(self):
-        payload = item("docker_tower")
+        payload = item("docker_server")
         result = parse_docker(payload["fields"])
         self.assertEqual(result["docker_running"], payload["fields"]["n_containers_running"])
 
@@ -98,8 +98,8 @@ class ParseNvidiaSmiTests(unittest.TestCase):
         self.assertEqual(result["gpu0_name"], "GeForce RTX 3070 Ti")
 
     def test_multi_gpu_uses_indexed_keys(self):
-        gpu0 = item("nvidia_smi_tower", 0)
-        gpu1 = item("nvidia_smi_tower", 1)
+        gpu0 = item("nvidia_smi_server", 0)
+        gpu1 = item("nvidia_smi_server", 1)
         self.assertEqual(gpu0["tags"]["index"], "0")
         self.assertEqual(gpu1["tags"]["index"], "1")
 
@@ -117,35 +117,35 @@ class ParseSensorsTests(unittest.TestCase):
         self.assertEqual(result["cpu_temp"], round(payload["fields"]["temp_input"], 1))
 
     def test_non_cpu_feature_ignored(self):
-        # sensors_framework[0] is amdgpu vddgfx voltage, not a CPU temp
-        payload = item("sensors_framework", 0)
+        # sensors_laptop[0] is amdgpu vddgfx voltage, not a CPU temp
+        payload = item("sensors_laptop", 0)
         result = parse_sensors(payload["tags"], payload["fields"])
         self.assertEqual(result, {})
 
 
 class ParseTempTests(unittest.TestCase):
     def test_pi_cpu_thermal_reports_cpu_temp(self):
-        payload = item("temp_ha_pi", 0)
+        payload = item("temp_raspberrypi", 0)
         self.assertEqual(payload["tags"]["sensor"], "cpu_thermal")
         result = parse_temp(payload["tags"], payload["fields"])
         self.assertEqual(result["cpu_temp"], round(payload["fields"]["temp"], 1))
 
     def test_pi_non_cpu_sensor_ignored(self):
-        # temp_ha_pi[1] is rp1_adc, not the CPU
-        payload = item("temp_ha_pi", 1)
+        # temp_raspberrypi[1] is rp1_adc, not the CPU
+        payload = item("temp_raspberrypi", 1)
         self.assertEqual(payload["tags"]["sensor"], "rp1_adc")
         result = parse_temp(payload["tags"], payload["fields"])
         self.assertEqual(result, {})
 
-    def test_pihole_cpu_thermal(self):
-        payload = item("temp_pihole", 0)
+    def test_raspberrypi2_cpu_thermal(self):
+        payload = item("temp_raspberrypi2", 0)
         result = parse_temp(payload["tags"], payload["fields"])
         self.assertIn("cpu_temp", result)
 
 
 class ParseBatteryTests(unittest.TestCase):
     def test_battery_measurement(self):
-        payload = item("battery_framework")
+        payload = item("battery_laptop")
         result = parse_battery("battery", payload["tags"], payload["fields"])
         self.assertEqual(result["battery"], round(payload["fields"]["value"]))
 
@@ -160,13 +160,13 @@ class ParseBatteryTests(unittest.TestCase):
 
 class ParseNetRateTests(unittest.TestCase):
     def test_first_sample_has_no_previous_returns_no_metrics(self):
-        payload = item("net_openwrt")
+        payload = item("net_router")
         result, sample = parse_net_rate(payload["tags"], payload["fields"], None, now=1000.0)
         self.assertEqual(result, {})
         self.assertIsInstance(sample, NetSample)
 
     def test_second_sample_computes_rate(self):
-        payload = item("net_openwrt")
+        payload = item("net_router")
         previous = NetSample(
             timestamp=1000.0,
             bytes_recv=payload["fields"]["bytes_recv"] - 1_000_000,
@@ -185,13 +185,13 @@ class ParseNetRateTests(unittest.TestCase):
 
 class DnsQueryTests(unittest.TestCase):
     def test_extracts_query_time(self):
-        payload = item("dns_query_openwrt", 0)
+        payload = item("dns_query_router", 0)
         self.assertEqual(
             parse_dns_query_sample(payload["fields"]), payload["fields"]["query_time_ms"]
         )
 
     def test_average_across_resolvers(self):
-        times = [parse_dns_query_sample(p["fields"]) for p in PAYLOADS["dns_query_openwrt"]]
+        times = [parse_dns_query_sample(p["fields"]) for p in PAYLOADS["dns_query_router"]]
         avg = average_dns_latency(times)
         self.assertEqual(avg, round(sum(times) / len(times)))
 
@@ -201,7 +201,7 @@ class DnsQueryTests(unittest.TestCase):
 
 class DispatcherTests(unittest.TestCase):
     def test_parse_measurement_routes_cpu(self):
-        payload = item("cpu_tower")
+        payload = item("cpu_server")
         result = parse_measurement("cpu", payload["tags"], payload["fields"])
         self.assertIn("cpu_usage", result)
 

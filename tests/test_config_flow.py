@@ -168,42 +168,42 @@ class OptionsFlowTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["reason"], "no_hosts_discovered")
 
     async def test_init_lists_discovered_hosts(self):
-        flow = self._make_options_flow(known_pairs={("tower", "cpu_usage"), ("pihole", "cpu_temp")})
+        flow = self._make_options_flow(known_pairs={("server", "cpu_usage"), ("raspberrypi2", "cpu_temp")})
         result = await flow.async_step_init()
         self.assertEqual(result["type"], "form")
         self.assertEqual(result["step_id"], "init")
 
     async def test_selecting_host_advances_to_host_step(self):
-        flow = self._make_options_flow(known_pairs={("tower", "cpu_usage")})
-        result = await flow.async_step_init({"host": "tower"})
+        flow = self._make_options_flow(known_pairs={("server", "cpu_usage")})
+        result = await flow.async_step_init({"host": "server"})
         self.assertEqual(result["type"], "form")
         self.assertEqual(result["step_id"], "host")
-        self.assertEqual(flow._selected_host, "tower")
+        self.assertEqual(flow._selected_host, "server")
 
     async def test_submitting_host_overrides_saves_options(self):
-        flow = self._make_options_flow(known_pairs={("tower", "cpu_usage")})
-        flow._selected_host = "tower"
+        flow = self._make_options_flow(known_pairs={("server", "cpu_usage")})
+        flow._selected_host = "server"
         result = await flow.async_step_host(
             {"manufacturer": "Unraid", "model": "Server", "name": ""}
         )
         self.assertEqual(result["type"], "create_entry")
         self.assertEqual(
-            result["data"]["host_overrides"]["tower"],
+            result["data"]["host_overrides"]["server"],
             {"manufacturer": "Unraid", "model": "Server"},
         )
 
     async def test_blank_fields_are_not_saved(self):
-        flow = self._make_options_flow(known_pairs={("tower", "cpu_usage")})
-        flow._selected_host = "tower"
+        flow = self._make_options_flow(known_pairs={("server", "cpu_usage")})
+        flow._selected_host = "server"
         result = await flow.async_step_host({"manufacturer": "", "model": "", "name": ""})
-        self.assertEqual(result["data"]["host_overrides"]["tower"], {})
+        self.assertEqual(result["data"]["host_overrides"]["server"], {})
 
     async def test_existing_overrides_prefill_the_form(self):
         flow = self._make_options_flow(
-            known_pairs={("tower", "cpu_usage")},
-            options={"host_overrides": {"tower": {"manufacturer": "Unraid"}}},
+            known_pairs={("server", "cpu_usage")},
+            options={"host_overrides": {"server": {"manufacturer": "Unraid"}}},
         )
-        flow._selected_host = "tower"
+        flow._selected_host = "server"
         result = await flow.async_step_host()
         self.assertEqual(result["type"], "form")
 

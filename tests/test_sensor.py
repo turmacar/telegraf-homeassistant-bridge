@@ -216,33 +216,33 @@ class SensorAttributesTests(unittest.TestCase):
         self.hass = make_hass()
         self.entry = make_entry()
         self.coordinator = coordinator_module.TelegrafBridgeCoordinator(self.hass, self.entry)
-        self.coordinator.hostnames["tower"] = "Tower"
+        self.coordinator.hostnames["server"] = "Server"
 
     def test_unique_id_and_basic_attributes(self):
-        entity = sensor_module.TelegrafBridgeSensor(self.coordinator, "tower", "cpu_usage")
-        self.assertEqual(entity._attr_unique_id, "tower_cpu_usage")
+        entity = sensor_module.TelegrafBridgeSensor(self.coordinator, "server", "cpu_usage")
+        self.assertEqual(entity._attr_unique_id, "server_cpu_usage")
         self.assertEqual(entity._attr_name, "CPU Usage")
         self.assertEqual(entity._attr_native_unit_of_measurement, "%")
         self.assertIsNone(entity._attr_device_class)
         self.assertEqual(entity._attr_state_class, "measurement")
 
     def test_gpu_indexed_metric_gets_per_gpu_label(self):
-        entity = sensor_module.TelegrafBridgeSensor(self.coordinator, "tower", "gpu0_temp")
-        self.assertEqual(entity._attr_unique_id, "tower_gpu0_temp")
+        entity = sensor_module.TelegrafBridgeSensor(self.coordinator, "server", "gpu0_temp")
+        self.assertEqual(entity._attr_unique_id, "server_gpu0_temp")
         self.assertEqual(entity._attr_name, "GPU 0 Temperature")
         self.assertEqual(entity._attr_device_class, "temperature")
 
     def test_native_value_reflects_coordinator_state(self):
-        entity = sensor_module.TelegrafBridgeSensor(self.coordinator, "tower", "cpu_usage")
+        entity = sensor_module.TelegrafBridgeSensor(self.coordinator, "server", "cpu_usage")
         self.assertIsNone(entity.native_value)
 
-        self.coordinator._apply_metrics("tower", {"cpu_usage": 42.0}, now=1000.0)
+        self.coordinator._apply_metrics("server", {"cpu_usage": 42.0}, now=1000.0)
         self.assertEqual(entity.native_value, 42.0)
 
     def test_availability_reflects_coordinator(self):
-        entity = sensor_module.TelegrafBridgeSensor(self.coordinator, "tower", "cpu_usage")
+        entity = sensor_module.TelegrafBridgeSensor(self.coordinator, "server", "cpu_usage")
         self.assertFalse(entity.available)
-        self.coordinator._apply_metrics("tower", {"cpu_usage": 42.0}, now=__import__("time").time())
+        self.coordinator._apply_metrics("server", {"cpu_usage": 42.0}, now=__import__("time").time())
         self.assertTrue(entity.available)
 
 
@@ -251,13 +251,13 @@ class SensorUpdateSignalTests(unittest.IsolatedAsyncioTestCase):
         hass = make_hass()
         entry = make_entry()
         coordinator = coordinator_module.TelegrafBridgeCoordinator(hass, entry)
-        entity = sensor_module.TelegrafBridgeSensor(coordinator, "tower", "cpu_usage")
+        entity = sensor_module.TelegrafBridgeSensor(coordinator, "server", "cpu_usage")
         entity.hass = hass
 
         await entity.async_added_to_hass()
         self.assertFalse(hasattr(entity, "_state_written"))
 
-        coordinator._apply_metrics("tower", {"cpu_usage": 55.0}, now=1000.0)
+        coordinator._apply_metrics("server", {"cpu_usage": 55.0}, now=1000.0)
         self.assertEqual(entity._state_written, 1)
         self.assertEqual(entity.native_value, 55.0)
 
@@ -270,8 +270,8 @@ class SetupEntryTests(unittest.IsolatedAsyncioTestCase):
         hass = make_hass()
         entry = make_entry()
         coordinator = coordinator_module.TelegrafBridgeCoordinator(hass, entry)
-        coordinator.known_pairs.add(("tower", "cpu_usage"))
-        coordinator.metrics[("tower", "cpu_usage")] = coordinator_module.MetricState(
+        coordinator.known_pairs.add(("server", "cpu_usage"))
+        coordinator.metrics[("server", "cpu_usage")] = coordinator_module.MetricState(
             value=None, last_updated=None
         )
         hass.data[coordinator_module.DOMAIN] = {entry.entry_id: coordinator}
@@ -284,11 +284,11 @@ class SetupEntryTests(unittest.IsolatedAsyncioTestCase):
         await sensor_module.async_setup_entry(hass, entry, async_add_entities)
 
         self.assertEqual(len(added_batches), 1)
-        self.assertEqual(added_batches[0][0]._attr_unique_id, "tower_cpu_usage")
+        self.assertEqual(added_batches[0][0]._attr_unique_id, "server_cpu_usage")
 
-        coordinator._apply_metrics("pihole", {"cpu_temp": 40.0}, now=1000.0)
+        coordinator._apply_metrics("raspberrypi2", {"cpu_temp": 40.0}, now=1000.0)
         self.assertEqual(len(added_batches), 2)
-        self.assertEqual(added_batches[1][0]._attr_unique_id, "pihole_cpu_temp")
+        self.assertEqual(added_batches[1][0]._attr_unique_id, "raspberrypi2_cpu_temp")
 
 
 class EntityIdCompatibilityTests(unittest.TestCase):
@@ -308,31 +308,31 @@ class EntityIdCompatibilityTests(unittest.TestCase):
         entity = sensor_module.TelegrafBridgeSensor(self.coordinator, host_id, metric)
         return simple_slugify(f"{hostname} {entity._attr_name}")
 
-    def test_tower_cpu_usage(self):
-        self.assertEqual(self._slug_for("Tower", "tower", "cpu_usage"), "tower_cpu_usage")
+    def test_server_cpu_usage(self):
+        self.assertEqual(self._slug_for("Server", "server", "cpu_usage"), "server_cpu_usage")
 
-    def test_desktop_strix_ram_usage(self):
+    def test_desktop_ram_usage(self):
         self.assertEqual(
-            self._slug_for("Desktop-STRIX", "desktop_strix", "ram_usage"),
-            "desktop_strix_ram_usage",
+            self._slug_for("Desktop", "desktop", "ram_usage"),
+            "desktop_ram_usage",
         )
 
-    def test_framework_13_battery(self):
+    def test_laptop_battery(self):
         self.assertEqual(
-            self._slug_for("Framework_13", "framework_13", "battery"),
-            "framework_13_battery",
+            self._slug_for("Laptop", "laptop", "battery"),
+            "laptop_battery",
         )
 
-    def test_pihole_cpu_temp(self):
+    def test_raspberrypi2_cpu_temp(self):
         self.assertEqual(
-            self._slug_for("pihole", "pihole", "cpu_temp"),
-            "pihole_cpu_temperature",
+            self._slug_for("raspberrypi2", "raspberrypi2", "cpu_temp"),
+            "raspberrypi2_cpu_temperature",
         )
 
-    def test_openwrt_dns_latency(self):
+    def test_router_dns_latency(self):
         self.assertEqual(
-            self._slug_for("openwrt", "openwrt", "dns_latency"),
-            "openwrt_dns_latency",
+            self._slug_for("router", "router", "dns_latency"),
+            "router_dns_latency",
         )
 
 

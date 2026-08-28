@@ -48,7 +48,7 @@ _LOGGER = logging.getLogger(__name__)
 
 def host_id_from_hostname(hostname: str) -> str:
     """Match Node-RED's host_id derivation so entity_ids line up with the
-    existing MQTT-discovery-derived ones (e.g. "Desktop-STRIX" -> "desktop_strix")."""
+    existing MQTT-discovery-derived ones (e.g. "Desktop-PC" -> "desktop_pc")."""
     return hostname.lower().replace("-", "_").replace(" ", "_")
 
 
@@ -141,11 +141,13 @@ class TelegrafBridgeCoordinator:
     def _process_item(
         self, host_id: str, measurement: str, tags: dict, fields: dict, now: float
     ) -> None:
-        if measurement == "dns_query" and host_id == "openwrt":
+        """Dispatch by measurement name only - no hostname special-casing,
+        so any host publishing these measurements is picked up automatically."""
+        if measurement == "dns_query":
             self._handle_dns_query(host_id, fields, now)
             return
 
-        if measurement == "net" and host_id == "openwrt":
+        if measurement == "net":
             metrics, sample = parse_net_rate(
                 tags, fields, self._net_samples.get(host_id), now=now
             )
