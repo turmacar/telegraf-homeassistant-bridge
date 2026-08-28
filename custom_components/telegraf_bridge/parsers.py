@@ -8,9 +8,8 @@ is testable without a running HA/MQTT stack.
 
 `net` and `dns_query` need state across messages (previous byte counters /
 a rolling window of query times) and are intentionally NOT part of the
-single-message `parse_measurement` dispatcher below - the coordinator
-(Phase 3) owns that state and calls `parse_net_rate` / `parse_dns_query_sample`
-directly.
+single-message `parse_measurement` dispatcher below - the coordinator owns
+that state and calls `parse_net_rate` / `parse_dns_query_sample` directly.
 
 `nvidia_smi` keys metrics by `tags["index"]` (gpu0_temp, gpu1_temp,...).
 """

@@ -13,13 +13,6 @@ MQTT and creates native sensor entities for them.
 
 ### HACS (custom repository)
 
-**Note**: this repo is currently **private**. [HACS only works reliably with
-public repositories](https://hacs.xyz/docs/publish/start/) - custom-repository
-install and the `hacs/action` CI validation won't fully work until it's made
-public. The packaging is otherwise ready to go (`hacs.json`, `info.md`,
-GitHub topics, `v0.1.0` release) - flipping the repo to public is the only
-remaining step. Once public:
-
 1. HACS -> Integrations -> top-right menu (⋮) -> **Custom repositories**
 2. Repository: `https://github.com/turmacar/telegraf-homeassistant-bridge`,
    Category: **Integration**

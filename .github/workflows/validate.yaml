@@ -1,11 +1,5 @@
 name: Validate
 
-# NOTE: this repo is currently private. HACS only works reliably with public
-# repositories (https://hacs.xyz/docs/publish/start/), so `hacs/action` is
-# expected to fail the hacsjson/integration_manifest/brands checks here until
-# the repo is made public - topics/description/license/readme checks should
-# still pass. Not a regression; nothing to fix until going public.
-
 on:
   push:
   pull_request:

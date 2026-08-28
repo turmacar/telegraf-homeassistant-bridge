@@ -1,6 +1,5 @@
-"""Real telegraf MQTT payload samples, captured 2026-08-28 via
-`mosquitto_sub -t 'systems/#' -v` against the production broker (see
-telegraf-homeassistant/TODO_ha-integration.local.md Phase 2). Used to build
+"""Real telegraf MQTT payload samples, captured via
+`mosquitto_sub -t 'systems/#' -v` against a live broker. Used to build
 and test parsers.py against actual payload shapes rather than guesses.
 
 Each value is a list of one or more raw telegraf JSON payloads (already

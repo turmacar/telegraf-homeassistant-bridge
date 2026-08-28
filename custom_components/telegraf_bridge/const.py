@@ -24,12 +24,9 @@ STALENESS_CHECK_INTERVAL_SECONDS = 30
 # average the last N samples per host into a single dns_latency reading.
 DNS_QUERY_WINDOW_SIZE = 5
 
-# Phase 7 parallel-validation: was appended to every entity's display name
-# (and therefore its initially-generated entity_id) so it could run
-# alongside the existing Node-RED/MQTT-discovery entities without
-# colliding. Cutover (Phase 8, 2026-08-28) is done - Node-RED is disabled,
-# its retained MQTT discovery configs cleared, and entity_ids renamed via a
-# direct core.entity_registry edit to drop "_integration". Left at "" now;
-# only needed if re-running a future parallel validation.
+# Optional suffix appended to every entity's display name (and therefore its
+# initially-generated entity_id). Useful for running this integration
+# alongside another MQTT-discovery-based setup without entity_id collisions
+# while validating it side by side. Leave as "" for normal use.
 VALIDATION_NAME_SUFFIX = ""
 

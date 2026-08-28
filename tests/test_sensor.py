@@ -293,10 +293,10 @@ class SetupEntryTests(unittest.IsolatedAsyncioTestCase):
 
 class EntityIdCompatibilityTests(unittest.TestCase):
     """Verify device-name + entity-name slugs match the existing
-    MQTT-discovery-derived entity_ids (Phase 0 decision), for the metrics
-    that kept flat naming. VALIDATION_NAME_SUFFIX defaults to "" post-cutover
-    (Phase 8, 2026-08-28) - these assert the final clean entity_ids. GPU
-    metrics intentionally changed separately - see TODO."""
+    MQTT-discovery-derived entity_ids, for the metrics that kept flat
+    naming. VALIDATION_NAME_SUFFIX defaults to "", so these assert the
+    final clean entity_ids. GPU metrics intentionally changed separately -
+    see TODO."""
 
     def setUp(self):
         self.hass = make_hass()

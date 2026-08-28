@@ -1,9 +1,9 @@
 """Config flow for Telegraf Bridge.
 
 Setup step just needs HA's core `mqtt` integration to already be configured
-(we depend on it for the broker connection, no separate credentials - see
-Phase 0 decisions). Options flow lets the user override manufacturer/model/
-display name for hosts the coordinator has already discovered.
+(we depend on it for the broker connection, no separate credentials).
+Options flow lets the user override manufacturer/model/display name for
+hosts the coordinator has already discovered.
 """
 
 from __future__ import annotations

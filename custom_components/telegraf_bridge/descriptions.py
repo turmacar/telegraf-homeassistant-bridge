@@ -1,7 +1,7 @@
 """Sensor metadata table, ported from gen_nodered_flow.py's baseSensors/
 extraSensors/gpuSensors. Plain dataclasses (no Home Assistant import) so
-parsers.py and its tests stay HA-free; sensor.py (Phase 5) converts these
-into SensorEntityDescription objects when building entities.
+parsers.py and its tests stay HA-free; sensor.py converts these into
+SensorEntityDescription objects when building entities.
 
 Metric names ending in a GPU index (e.g. "gpu0_temp") aren't listed
 directly - use `describe_metric()` which normalizes "gpu{N}_*" to the
