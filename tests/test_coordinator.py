@@ -55,11 +55,13 @@ def install_homeassistant_stubs(stubbed_modules: dict[str, object]) -> types.Sim
     """Install the minimal HA surface coordinator.py touches."""
 
     def ensure_stub_module(module_name: str, *, package: bool = False) -> types.ModuleType:
-        module = sys.modules.get(module_name)
-        if not isinstance(module, types.ModuleType):
-            module = types.ModuleType(module_name)
-            _install_stub_module(stubbed_modules, module_name, module)
-        if package and not hasattr(module, "__path__"):
+        # Always create a fresh module, even if one already exists in
+        # sys.modules from another test file's collection-time stubbing -
+        # reusing it would let that file's later mutations leak into
+        # already-loaded modules here that still hold a direct reference.
+        module = types.ModuleType(module_name)
+        _install_stub_module(stubbed_modules, module_name, module)
+        if package:
             module.__path__ = []
         return module
 
@@ -160,9 +162,19 @@ def tearDownModule() -> None:
     restore_stubbed_modules(stubbed_modules)
 
 
+def _run_or_schedule(coro):
+    """Run a coroutine immediately if no event loop is running (plain
+    sync unittest.TestCase), otherwise schedule it on the running loop."""
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)
+    return loop.create_task(coro)
+
+
 def make_hass():
     hass = types.SimpleNamespace(data={})
-    hass.async_create_task = lambda coro: asyncio.ensure_future(coro)
+    hass.async_create_task = _run_or_schedule
     return hass
 
 

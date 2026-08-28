@@ -52,11 +52,13 @@ class FakeFlowBase:
 
 def install_homeassistant_stubs(stubbed_modules: dict[str, object]) -> None:
     def ensure_stub_module(module_name: str, *, package: bool = False) -> types.ModuleType:
-        module = sys.modules.get(module_name)
-        if not isinstance(module, types.ModuleType):
-            module = types.ModuleType(module_name)
-            _install_stub_module(stubbed_modules, module_name, module)
-        if package and not hasattr(module, "__path__"):
+        # Always create a fresh module, even if one already exists in
+        # sys.modules from another test file's collection-time stubbing -
+        # reusing it would let that file's later mutations leak into
+        # already-loaded modules here that still hold a direct reference.
+        module = types.ModuleType(module_name)
+        _install_stub_module(stubbed_modules, module_name, module)
+        if package:
             module.__path__ = []
         return module
 
