@@ -345,6 +345,33 @@ PAYLOADS = {
             "timestamp": 1787941820
         }
     ],
+    "amd_smi_desktop_strix": [
+        {
+            "fields": {
+                "memory_used": 1203,
+                "temperature_gpu": 50,
+                "utilization_gpu": 7
+            },
+            "name": "amd_smi",
+            "tags": {
+                "host": "Desktop-STRIX",
+                "index": "0"
+            },
+            "timestamp": 1788481119
+        },
+        {
+            "fields": {
+                "compute_units": 96
+            },
+            "name": "amd_smi",
+            "tags": {
+                "host": "Desktop-STRIX",
+                "index": "0",
+                "name": "AMD Radeon RX 7900 XTX"
+            },
+            "timestamp": 1788481119
+        }
+    ],
     "sensors_desktop_tctl": [
         {
             "fields": {

@@ -110,6 +110,30 @@ class ParseNvidiaSmiTests(unittest.TestCase):
         self.assertNotIn("gpu1_temp", result0)
 
 
+class ParseAmdSmiTests(unittest.TestCase):
+    """amd_smi (telegraf's exec+json_v2 wrapper around amd-smi, since telegraf
+    has no native AMD GPU plugin) reuses parse_nvidia_smi - same fields/tags
+    shape, different vendor name prefix."""
+
+    def test_metric_message_reports_temp_usage_vram(self):
+        payload = item("amd_smi_desktop_strix", 0)
+        result = parse_nvidia_smi(payload["tags"], payload["fields"])
+        self.assertEqual(result["gpu0_temp"], payload["fields"]["temperature_gpu"])
+        self.assertEqual(result["gpu0_usage"], payload["fields"]["utilization_gpu"])
+        self.assertEqual(result["gpu0_vram_used"], payload["fields"]["memory_used"])
+        self.assertNotIn("gpu0_name", result)
+
+    def test_name_message_strips_amd_prefix(self):
+        payload = item("amd_smi_desktop_strix", 1)
+        result = parse_nvidia_smi(payload["tags"], payload["fields"])
+        self.assertEqual(result["gpu0_name"], "Radeon RX 7900 XTX")
+
+    def test_dispatcher_routes_amd_smi_to_same_parser(self):
+        payload = item("amd_smi_desktop_strix", 0)
+        result = parse_measurement("amd_smi", payload["tags"], payload["fields"])
+        self.assertIn("gpu0_temp", result)
+
+
 class ParseSensorsTests(unittest.TestCase):
     def test_amd_tctl_is_cpu_temp(self):
         payload = item("sensors_desktop_tctl")

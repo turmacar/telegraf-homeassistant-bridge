@@ -11,7 +11,10 @@ a rolling window of query times) and are intentionally NOT part of the
 single-message `parse_measurement` dispatcher below - the coordinator owns
 that state and calls `parse_net_rate` / `parse_dns_query_sample` directly.
 
-`nvidia_smi` keys metrics by `tags["index"]` (gpu0_temp, gpu1_temp,...).
+`nvidia_smi` (real NVML data) and `amd_smi` (amd-smi reshaped via telegraf's
+exec + json_v2 to the same measurement/tags/fields, since telegraf has no
+native AMD GPU plugin) both key metrics by `tags["index"]`
+(gpu0_temp, gpu1_temp,...).
 """
 
 from __future__ import annotations
@@ -66,7 +69,10 @@ def parse_docker(fields: dict) -> dict[str, MetricValue]:
 
 def parse_nvidia_smi(tags: dict, fields: dict) -> dict[str, MetricValue]:
     """GPU temp/usage/vram/name, keyed by tags.index (always gpu{index}_*,
-    even for single-GPU hosts - simpler than tracking multi-GPU state)."""
+    even for single-GPU hosts - simpler than tracking multi-GPU state).
+    Shared by both the real `nvidia_smi` plugin and the `amd_smi` exec-based
+    equivalent - same fields/tags shape, just a different vendor prefix on
+    the name tag."""
     prefix = f"gpu{tags.get('index')}_"
     result: dict[str, MetricValue] = {}
     if fields.get("temperature_gpu") is not None:
@@ -77,7 +83,11 @@ def parse_nvidia_smi(tags: dict, fields: dict) -> dict[str, MetricValue]:
         result[f"{prefix}vram_used"] = round(fields["memory_used"])
     name = tags.get("name")
     if name:
-        result[f"{prefix}name"] = name.removeprefix("NVIDIA ").removeprefix("NVIDIA")
+        for vendor_prefix in ("NVIDIA ", "NVIDIA", "AMD ", "AMD"):
+            if name.startswith(vendor_prefix):
+                name = name.removeprefix(vendor_prefix)
+                break
+        result[f"{prefix}name"] = name
     return result
 
 
@@ -144,7 +154,7 @@ def parse_measurement(
         return parse_system(fields)
     if measurement == "docker":
         return parse_docker(fields)
-    if measurement == "nvidia_smi":
+    if measurement in ("nvidia_smi", "amd_smi"):
         return parse_nvidia_smi(tags, fields)
     if measurement == "sensors":
         return parse_sensors(tags, fields)
