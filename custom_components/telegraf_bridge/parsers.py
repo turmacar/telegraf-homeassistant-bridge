@@ -14,7 +14,9 @@ that state and calls `parse_net_rate` / `parse_dns_query_sample` directly.
 `nvidia_smi` (real NVML data) and `amd_smi` (amd-smi reshaped via telegraf's
 exec + json_v2 to the same measurement/tags/fields, since telegraf has no
 native AMD GPU plugin) both key metrics by `tags["index"]`
-(gpu0_temp, gpu1_temp,...).
+(gpu0_temp, gpu1_temp,...). `amdgpu_sysfs` is the same idea for hosts with
+no amd-smi/ROCm available (e.g. SteamOS): raw amdgpu sysfs node values,
+still keyed by `tags["index"]`, converted from native sysfs units.
 """
 
 from __future__ import annotations
@@ -91,6 +93,27 @@ def parse_nvidia_smi(tags: dict, fields: dict) -> dict[str, MetricValue]:
     return result
 
 
+def parse_amdgpu_sysfs(tags: dict, fields: dict) -> dict[str, MetricValue]:
+    """AMD GPU temp/usage/vram read straight from amdgpu's own sysfs nodes
+    (gpu_busy_percent, mem_info_vram_used, temp1_input) - for hosts with no
+    amd-smi/ROCm available (e.g. SteamOS). Keyed by tags.index like
+    nvidia_smi/amd_smi, but units are native sysfs units (millidegrees C,
+    bytes) rather than amd-smi's already-converted values, so conversion
+    happens here instead of in the telegraf config."""
+    prefix = f"gpu{tags.get('index')}_"
+    result: dict[str, MetricValue] = {}
+    temp_millidegrees = fields.get("temp1_input")
+    if temp_millidegrees is not None:
+        result[f"{prefix}temp"] = round(temp_millidegrees / 1000, 1)
+    busy_percent = fields.get("gpu_busy_percent")
+    if busy_percent is not None:
+        result[f"{prefix}usage"] = round(busy_percent, 1)
+    vram_bytes = fields.get("mem_info_vram_used")
+    if vram_bytes is not None:
+        result[f"{prefix}vram_used"] = round(vram_bytes / 1048576)
+    return result
+
+
 def parse_sensors(tags: dict, fields: dict) -> dict[str, MetricValue]:
     """CPU temp via lm-sensors: tctl (AMD), package_id_N (Intel), or
     coretemp chip + physical feature."""
@@ -156,6 +179,8 @@ def parse_measurement(
         return parse_docker(fields)
     if measurement in ("nvidia_smi", "amd_smi"):
         return parse_nvidia_smi(tags, fields)
+    if measurement == "amdgpu_sysfs":
+        return parse_amdgpu_sysfs(tags, fields)
     if measurement == "sensors":
         return parse_sensors(tags, fields)
     if measurement == "temp":

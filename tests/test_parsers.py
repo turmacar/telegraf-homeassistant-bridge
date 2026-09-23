@@ -13,6 +13,7 @@ sys.path.insert(0, str(REPO_ROOT / "custom_components" / "telegraf_bridge"))
 from parsers import (  # noqa: E402
     NetSample,
     average_dns_latency,
+    parse_amdgpu_sysfs,
     parse_battery,
     parse_cpu,
     parse_disk,
@@ -131,6 +132,23 @@ class ParseAmdSmiTests(unittest.TestCase):
     def test_dispatcher_routes_amd_smi_to_same_parser(self):
         payload = item("amd_smi_desktop_strix", 0)
         result = parse_measurement("amd_smi", payload["tags"], payload["fields"])
+        self.assertIn("gpu0_temp", result)
+
+
+class ParseAmdgpuSysfsTests(unittest.TestCase):
+    """amdgpu_sysfs - raw amdgpu sysfs node values (native units: millidegrees
+    C, bytes) for hosts with no amd-smi/ROCm, e.g. SteamOS."""
+
+    def test_reports_temp_usage_vram_converted_from_native_units(self):
+        payload = item("amdgpu_sysfs_steammachine")
+        result = parse_amdgpu_sysfs(payload["tags"], payload["fields"])
+        self.assertEqual(result["gpu0_temp"], 29.0)
+        self.assertEqual(result["gpu0_usage"], 7)
+        self.assertEqual(result["gpu0_vram_used"], 806)
+
+    def test_dispatcher_routes_amdgpu_sysfs_to_its_parser(self):
+        payload = item("amdgpu_sysfs_steammachine")
+        result = parse_measurement("amdgpu_sysfs", payload["tags"], payload["fields"])
         self.assertIn("gpu0_temp", result)
 
 

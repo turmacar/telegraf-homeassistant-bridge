@@ -372,6 +372,21 @@ PAYLOADS = {
             "timestamp": 1788481119
         }
     ],
+    "amdgpu_sysfs_steammachine": [
+        {
+            "fields": {
+                "gpu_busy_percent": 7,
+                "mem_info_vram_used": 845398016,
+                "temp1_input": 29000
+            },
+            "name": "amdgpu_sysfs",
+            "tags": {
+                "host": "SteamMachine",
+                "index": "0"
+            },
+            "timestamp": 1790450944
+        }
+    ],
     "sensors_desktop_tctl": [
         {
             "fields": {
