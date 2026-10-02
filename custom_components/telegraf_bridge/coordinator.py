@@ -4,8 +4,8 @@ Subscribes to the telegraf MQTT topic, routes each message through
 parsers.py, tracks per-(host_id, metric) state, and notifies sensor.py
 (via dispatcher signals) of new and updated entities. Owns all the stateful
 bits parsers.py deliberately doesn't: net rate previous-sample tracking,
-dns_query rolling-window averaging, and persistence of known (host_id,
-metric) pairs across HA restarts.
+dns_query rolling-window averaging, weekly/monthly WAN usage totals, and
+persistence of known (host_id, metric) pairs across HA restarts.
 """
 
 from __future__ import annotations
@@ -14,7 +14,8 @@ import json
 import logging
 import time
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from homeassistant.components import mqtt
 from homeassistant.config_entries import ConfigEntry
@@ -33,14 +34,17 @@ from .const import (
     STALENESS_CHECK_INTERVAL_SECONDS,
     STORAGE_KEY,
     STORAGE_VERSION,
+    WAN_USAGE_SAVE_DELAY_SECONDS,
 )
 from .parsers import (
     MetricValue,
     NetSample,
+    WanUsageState,
     average_dns_latency,
     parse_dns_query_sample,
     parse_measurement,
     parse_net_rate,
+    parse_wan_usage,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -75,6 +79,7 @@ class TelegrafBridgeCoordinator:
         self.hostnames: dict[str, str] = {}
         self._net_samples: dict[str, NetSample] = {}
         self._dns_samples: dict[str, list[float]] = {}
+        self._wan_usage: dict[str, WanUsageState] = {}
         self._unsub_mqtt = None
         self._unsub_interval = None
 
@@ -86,6 +91,8 @@ class TelegrafBridgeCoordinator:
                 self.known_pairs.add((host_id, metric))
                 self.metrics[(host_id, metric)] = MetricState(value=None, last_updated=None)
                 async_dispatcher_send(self.hass, SIGNAL_NEW_ENTITY, host_id, metric)
+            for host_id, usage in stored.get("wan_usage", {}).items():
+                self._wan_usage[host_id] = WanUsageState.from_dict(usage)
 
         topic = self.entry.data.get("topic", DEFAULT_TOPIC)
         self._unsub_mqtt = await mqtt.async_subscribe(self.hass, topic, self._handle_message)
@@ -154,10 +161,21 @@ class TelegrafBridgeCoordinator:
             if sample is not None:
                 self._net_samples[host_id] = sample
             self._apply_metrics(host_id, metrics, now)
+            self._handle_wan_usage(host_id, tags, fields, now)
             return
 
         metrics = parse_measurement(measurement, tags, fields)
         self._apply_metrics(host_id, metrics, now)
+
+    def _handle_wan_usage(self, host_id: str, tags: dict, fields: dict, now: float) -> None:
+        state = self._wan_usage.get(host_id) or WanUsageState()
+        local_now = datetime.fromtimestamp(now, ZoneInfo(self.hass.config.time_zone))
+        metrics = parse_wan_usage(tags, fields, state, now=local_now)
+        if not metrics:
+            return
+        self._wan_usage[host_id] = state
+        self._apply_metrics(host_id, metrics, now)
+        self.store.async_delay_save(self._data_to_save, WAN_USAGE_SAVE_DELAY_SECONDS)
 
     def _handle_dns_query(self, host_id: str, fields: dict, now: float) -> None:
         sample = parse_dns_query_sample(fields)
@@ -165,10 +183,9 @@ class TelegrafBridgeCoordinator:
             return
         window = self._dns_samples.setdefault(host_id, [])
         window.append(sample)
-        if len(window) < DNS_QUERY_WINDOW_SIZE:
-            return
+        # Rolling window, published on every sample so it never outlives STALE_AFTER_SECONDS.
+        del window[:-DNS_QUERY_WINDOW_SIZE]
         avg = average_dns_latency(window)
-        window.clear()
         if avg is not None:
             self._apply_metrics(host_id, {"dns_latency": avg}, now)
 
@@ -186,10 +203,14 @@ class TelegrafBridgeCoordinator:
         if newly_added:
             self.hass.async_create_task(self._async_persist())
 
+    def _data_to_save(self) -> dict:
+        return {
+            "known_pairs": [list(pair) for pair in self.known_pairs],
+            "wan_usage": {host_id: state.to_dict() for host_id, state in self._wan_usage.items()},
+        }
+
     async def _async_persist(self) -> None:
-        await self.store.async_save(
-            {"known_pairs": [list(pair) for pair in self.known_pairs]}
-        )
+        await self.store.async_save(self._data_to_save())
 
     @callback
     def _async_check_staleness(self, now) -> None:

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import sys
 import unittest
+from datetime import datetime
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -12,6 +13,8 @@ sys.path.insert(0, str(REPO_ROOT / "custom_components" / "telegraf_bridge"))
 
 from parsers import (  # noqa: E402
     NetSample,
+    UsageBucket,
+    WanUsageState,
     average_dns_latency,
     parse_amdgpu_sysfs,
     parse_battery,
@@ -26,6 +29,8 @@ from parsers import (  # noqa: E402
     parse_sensors,
     parse_system,
     parse_temp,
+    parse_wan_usage,
+    usage_period_keys,
 )
 
 from tests.fixtures.telegraf_payloads import PAYLOADS
@@ -223,6 +228,75 @@ class ParseNetRateTests(unittest.TestCase):
         result, sample = parse_net_rate({"interface": "wlan0"}, {"bytes_recv": 1, "bytes_sent": 1}, None, now=1.0)
         self.assertEqual(result, {})
         self.assertIsNone(sample)
+
+
+class WanUsageTests(unittest.TestCase):
+    WAN = {"interface": "eth0", "role": "wan"}
+    # Thursday 2026-10-01 -> ISO week 40
+    NOW = datetime(2026, 10, 1, 12, 0)
+
+    def test_period_keys_use_iso_week_and_month(self):
+        self.assertEqual(
+            usage_period_keys(self.NOW), {"week": "2026-W40", "month": "2026-10", "lifetime": "lifetime"}
+        )
+
+    def test_untagged_interface_is_ignored(self):
+        state = WanUsageState()
+        result = parse_wan_usage({"interface": "eth0"}, {"bytes_recv": 1, "bytes_sent": 1}, state, now=self.NOW)
+        self.assertEqual(result, {})
+        self.assertIsNone(state.last_rx)
+
+    def test_first_sample_seeds_counters_without_counting(self):
+        state = WanUsageState()
+        result = parse_wan_usage(self.WAN, {"bytes_recv": 5e9, "bytes_sent": 1e9}, state, now=self.NOW)
+        self.assertEqual(result["wan_rx_month"], 0)
+        self.assertEqual(state.last_rx, 5e9)
+
+    def test_accumulates_deltas_into_week_and_month(self):
+        state = WanUsageState(last_rx=1e9, last_tx=1e9)
+        result = parse_wan_usage(self.WAN, {"bytes_recv": 3e9, "bytes_sent": 1.5e9}, state, now=self.NOW)
+        self.assertEqual(result, {
+            "wan_rx_week": 2.0, "wan_tx_week": 0.5, "wan_rx_month": 2.0, "wan_tx_month": 0.5,
+            "wan_rx_lifetime": 2.0, "wan_tx_lifetime": 0.5,
+        })
+
+    def test_counter_reset_counts_new_value_as_delta(self):
+        state = WanUsageState(last_rx=9e9, last_tx=9e9)
+        result = parse_wan_usage(self.WAN, {"bytes_recv": 1e9, "bytes_sent": 2e9}, state, now=self.NOW)
+        self.assertEqual(result["wan_rx_week"], 1.0)
+        self.assertEqual(result["wan_tx_week"], 2.0)
+
+    def test_new_week_resets_week_but_not_month(self):
+        state = WanUsageState(
+            last_rx=0, last_tx=0,
+            buckets={
+                "week": UsageBucket("2026-W40", 5e9, 5e9),
+                "month": UsageBucket("2026-10", 5e9, 5e9),
+                "lifetime": UsageBucket("lifetime", 50e9, 50e9),
+            },
+        )
+        monday = datetime(2026, 10, 5, 0, 1)
+        result = parse_wan_usage(self.WAN, {"bytes_recv": 1e9, "bytes_sent": 0}, state, now=monday)
+        self.assertEqual(result["wan_rx_week"], 1.0)
+        self.assertEqual(result["wan_rx_month"], 6.0)
+        self.assertEqual(result["wan_rx_lifetime"], 51.0)
+
+    def test_new_year_does_not_reset_lifetime(self):
+        state = WanUsageState(last_rx=0, last_tx=0, buckets={"lifetime": UsageBucket("lifetime", 50e9, 0)})
+        result = parse_wan_usage(self.WAN, {"bytes_recv": 1e9, "bytes_sent": 0}, state, now=datetime(2027, 1, 1))
+        self.assertEqual(result["wan_rx_lifetime"], 51.0)
+        self.assertEqual(result["wan_rx_month"], 1.0)
+
+    def test_state_round_trips_through_dict(self):
+        state = WanUsageState(
+            last_rx=1, last_tx=2,
+            buckets={"month": UsageBucket("2026-10", 3, 4), "lifetime": UsageBucket("lifetime", 30, 40)},
+        )
+        self.assertEqual(WanUsageState.from_dict(state.to_dict()), state)
+
+    def test_pre_lifetime_state_seeds_lifetime_from_month(self):
+        data = {"last_rx": 1, "last_tx": 2, "buckets": {"month": {"period_key": "2026-10", "rx_bytes": 3, "tx_bytes": 4}}}
+        self.assertEqual(WanUsageState.from_dict(data).buckets["lifetime"], UsageBucket("lifetime", 3, 4))
 
 
 class DnsQueryTests(unittest.TestCase):

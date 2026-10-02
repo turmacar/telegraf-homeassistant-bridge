@@ -24,6 +24,9 @@ STALENESS_CHECK_INTERVAL_SECONDS = 30
 # last N samples per host into a single dns_latency reading.
 DNS_QUERY_WINDOW_SIZE = 5
 
+# Batch WAN usage persistence instead of writing .storage on every net message.
+WAN_USAGE_SAVE_DELAY_SECONDS = 300
+
 # Optional suffix appended to every entity's display name (and therefore its
 # initially-generated entity_id). Useful for running this integration
 # alongside another MQTT-discovery-based setup without entity_id collisions

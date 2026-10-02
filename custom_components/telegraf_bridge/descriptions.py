@@ -58,6 +58,24 @@ EXTRA_SENSOR_DESCRIPTIONS: dict[str, SensorDescription] = {
     "wan_tx_mbps": SensorDescription(
         "WAN Upload", "mdi:upload-network", "Mbit/s", device_class="data_rate", state_class="measurement"
     ),
+    "wan_rx_week": SensorDescription(
+        "WAN Download This Week", "mdi:download-network", "GB", device_class="data_size", state_class="total_increasing"
+    ),
+    "wan_tx_week": SensorDescription(
+        "WAN Upload This Week", "mdi:upload-network", "GB", device_class="data_size", state_class="total_increasing"
+    ),
+    "wan_rx_month": SensorDescription(
+        "WAN Download This Month", "mdi:download-network", "GB", device_class="data_size", state_class="total_increasing"
+    ),
+    "wan_tx_month": SensorDescription(
+        "WAN Upload This Month", "mdi:upload-network", "GB", device_class="data_size", state_class="total_increasing"
+    ),
+    "wan_rx_lifetime": SensorDescription(
+        "WAN Download Lifetime", "mdi:download-network", "GB", device_class="data_size", state_class="total_increasing"
+    ),
+    "wan_tx_lifetime": SensorDescription(
+        "WAN Upload Lifetime", "mdi:upload-network", "GB", device_class="data_size", state_class="total_increasing"
+    ),
     "dns_latency": SensorDescription(
         "DNS Latency", "mdi:dns", "ms", device_class="duration", state_class="measurement"
     ),

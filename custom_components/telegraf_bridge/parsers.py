@@ -21,6 +21,8 @@ still keyed by `tags["index"]`, converted from native sysfs units.
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
+from datetime import datetime
 from typing import NamedTuple
 
 MetricValue = float | int | str
@@ -235,6 +237,101 @@ def parse_net_rate(
     if tx_mbps >= 0:
         result["wan_tx_mbps"] = round(tx_mbps, 2)
     return result, new_sample
+
+
+@dataclass
+class UsageBucket:
+    """Bytes accumulated during one calendar period (e.g. "2026-W40")."""
+
+    period_key: str
+    rx_bytes: float = 0.0
+    tx_bytes: float = 0.0
+
+
+@dataclass
+class WanUsageState:
+    """Per-host WAN usage accumulator. The coordinator persists this so both
+    the period totals and the last raw counters survive HA restarts (traffic
+    while HA was down still gets counted on the next message)."""
+
+    last_rx: float | None = None
+    last_tx: float | None = None
+    buckets: dict[str, UsageBucket] = field(default_factory=dict)
+
+    def to_dict(self) -> dict:
+        return {
+            "last_rx": self.last_rx,
+            "last_tx": self.last_tx,
+            "buckets": {
+                period: {"period_key": b.period_key, "rx_bytes": b.rx_bytes, "tx_bytes": b.tx_bytes}
+                for period, b in self.buckets.items()
+            },
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> WanUsageState:
+        buckets = {
+            period: UsageBucket(**bucket) for period, bucket in data.get("buckets", {}).items()
+        }
+        # State saved before lifetime existed: tracking began this month, so seed from it.
+        if "lifetime" not in buckets and "month" in buckets:
+            month = buckets["month"]
+            buckets["lifetime"] = UsageBucket("lifetime", month.rx_bytes, month.tx_bytes)
+        return cls(last_rx=data.get("last_rx"), last_tx=data.get("last_tx"), buckets=buckets)
+
+
+def usage_period_keys(now: datetime) -> dict[str, str]:
+    """ISO week (Monday start), calendar month, and a never-rolling lifetime key."""
+    iso = now.isocalendar()
+    return {
+        "week": f"{iso.year}-W{iso.week:02d}",
+        "month": f"{now.year}-{now.month:02d}",
+        "lifetime": "lifetime",
+    }
+
+
+def _counter_delta(current: float, previous: float | None) -> float:
+    if previous is None:
+        return 0.0
+    if current < previous:
+        # Kernel counter restarted (router reboot) - everything since is new.
+        return current
+    return current - previous
+
+
+def parse_wan_usage(
+    tags: dict,
+    fields: dict,
+    state: WanUsageState,
+    *,
+    now: datetime,
+) -> dict[str, MetricValue]:
+    """Weekly/monthly/lifetime WAN download/upload totals (GB) from cumulative byte
+    counters. Only applies to net metrics tagged `role = "wan"` in the
+    host's telegraf config, so LAN hosts that also publish eth0 don't get
+    bogus usage sensors. Mutates `state` in place; `now` must be local time
+    so periods roll over at local midnight."""
+    if tags.get("role") != "wan":
+        return {}
+    bytes_recv = fields.get("bytes_recv")
+    bytes_sent = fields.get("bytes_sent")
+    if bytes_recv is None or bytes_sent is None:
+        return {}
+
+    rx_delta = _counter_delta(bytes_recv, state.last_rx)
+    tx_delta = _counter_delta(bytes_sent, state.last_tx)
+    state.last_rx, state.last_tx = bytes_recv, bytes_sent
+
+    result: dict[str, MetricValue] = {}
+    for period, key in usage_period_keys(now).items():
+        bucket = state.buckets.get(period)
+        if bucket is None or bucket.period_key != key:
+            bucket = state.buckets[period] = UsageBucket(key)
+        bucket.rx_bytes += rx_delta
+        bucket.tx_bytes += tx_delta
+        result[f"wan_rx_{period}"] = round(bucket.rx_bytes / 1e9, 3)
+        result[f"wan_tx_{period}"] = round(bucket.tx_bytes / 1e9, 3)
+    return result
 
 
 def parse_dns_query_sample(fields: dict) -> float | None:

@@ -13,7 +13,7 @@ MQTT and creates native sensor entities for them.
 
 ### HACS (custom repository)
 
-1. HACS -> Integrations -> top-right menu (⋮) -> **Custom repositories**
+1. HACS -> Integrations -> top-right menu -> **Custom repositories**
 2. Repository: `https://github.com/turmacar/telegraf-homeassistant-bridge`,
    Category: **Integration**
 3. Install "Telegraf Bridge" from HACS, then restart Home Assistant

@@ -246,7 +246,7 @@ PAYLOADS = {
                 "index": "0",
                 "name": "NVIDIA GeForce GTX 1050 Ti",
                 "pstate": "P8",
-                "uuid": "GPU-9eeb3835-c5bd-dac6-c0df-ce151c8fe48c"
+                "uuid": "GPU-00000000-0000-0000-0000-000000000000"
             },
             "timestamp": 1787941820
         },
@@ -290,7 +290,7 @@ PAYLOADS = {
                 "index": "1",
                 "name": "NVIDIA GeForce GTX 1070",
                 "pstate": "P8",
-                "uuid": "GPU-a3032886-0acb-0232-bc54-3d5ecad66035"
+                "uuid": "GPU-00000000-0000-0000-0000-000000000001"
             },
             "timestamp": 1787941820
         }
@@ -340,7 +340,7 @@ PAYLOADS = {
                 "index": "0",
                 "name": "NVIDIA GeForce RTX 3070 Ti",
                 "pstate": "P8",
-                "uuid": "GPU-6dd87557-13a0-1dcb-eb56-2804e0d56ffd"
+                "uuid": "GPU-00000000-0000-0000-0000-000000000002"
             },
             "timestamp": 1787941820
         }

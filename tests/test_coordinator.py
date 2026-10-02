@@ -41,6 +41,7 @@ class FakeStore:
         self.version = version
         self.key = key
         self.saved: list[dict] = []
+        self.delay_saves: list = []
         self._data: dict | None = None
 
     async def async_load(self) -> dict | None:
@@ -49,6 +50,9 @@ class FakeStore:
     async def async_save(self, data: dict) -> None:
         self._data = data
         self.saved.append(data)
+
+    def async_delay_save(self, data_func, delay=0) -> None:
+        self.delay_saves.append((data_func, delay))
 
 
 def install_homeassistant_stubs(stubbed_modules: dict[str, object]) -> types.SimpleNamespace:
@@ -173,7 +177,7 @@ def _run_or_schedule(coro):
 
 
 def make_hass():
-    hass = types.SimpleNamespace(data={})
+    hass = types.SimpleNamespace(data={}, config=types.SimpleNamespace(time_zone="UTC"))
     hass.async_create_task = _run_or_schedule
     return hass
 
@@ -265,19 +269,21 @@ class ProcessMessageTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn(("server", "gpu1_temp"), self.coordinator.known_pairs)
 
 
-    async def test_dns_query_averages_after_window_fills(self):
+    async def test_dns_query_publishes_rolling_average_every_sample(self):
         import json
 
-        payload = json.dumps(
-            {"fields": {"query_time_ms": 10.0}, "tags": {"server": "1.1.1.1"}, "name": "dns_query"}
-        )
-        for _ in range(4):
-            await self.coordinator._async_process_message("systems/router/dns_query", payload)
-        self.assertNotIn(("router", "dns_latency"), self.coordinator.known_pairs)
+        def payload(ms):
+            return json.dumps(
+                {"fields": {"query_time_ms": ms}, "tags": {"server": "1.1.1.1"}, "name": "dns_query"}
+            )
 
-        await self.coordinator._async_process_message("systems/router/dns_query", payload)
-        self.assertIn(("router", "dns_latency"), self.coordinator.known_pairs)
+        await self.coordinator._async_process_message("systems/router/dns_query", payload(10.0))
         self.assertEqual(self.coordinator.metrics[("router", "dns_latency")].value, 10)
+
+        for _ in range(5):
+            await self.coordinator._async_process_message("systems/router/dns_query", payload(20.0))
+        # Oldest 10ms sample has rolled out of the 5-sample window.
+        self.assertEqual(self.coordinator.metrics[("router", "dns_latency")].value, 20)
 
     async def test_net_rate_needs_two_samples(self):
         import json
@@ -291,6 +297,46 @@ class ProcessMessageTests(unittest.IsolatedAsyncioTestCase):
         )
         await self.coordinator._async_process_message("systems/router/net", payload)
         self.assertNotIn(("router", "wan_rx_mbps"), self.coordinator.known_pairs)
+
+    async def test_untagged_net_does_not_create_usage_sensors(self):
+        import json
+
+        payload = json.dumps(
+            {"fields": {"bytes_recv": 1, "bytes_sent": 1}, "tags": {"interface": "eth0"}, "name": "net"}
+        )
+        await self.coordinator._async_process_message("systems/ha-pi/net", payload)
+        self.assertNotIn(("ha_pi", "wan_rx_month"), self.coordinator.known_pairs)
+        self.assertEqual(self.coordinator.store.delay_saves, [])
+
+    async def test_wan_tagged_net_accumulates_usage_and_schedules_save(self):
+        import json
+
+        def payload(rx, tx):
+            return json.dumps(
+                {
+                    "fields": {"bytes_recv": rx, "bytes_sent": tx},
+                    "tags": {"interface": "eth0", "role": "wan"},
+                    "name": "net",
+                }
+            )
+
+        await self.coordinator._async_process_message("systems/openwrt/net", payload(1e9, 1e9))
+        await self.coordinator._async_process_message("systems/openwrt/net", payload(4e9, 2e9))
+
+        self.assertEqual(self.coordinator.metrics[("openwrt", "wan_rx_month")].value, 3.0)
+        self.assertEqual(self.coordinator.metrics[("openwrt", "wan_tx_week")].value, 1.0)
+        data_func, _delay = self.coordinator.store.delay_saves[-1]
+        saved = data_func()
+        self.assertEqual(saved["wan_usage"]["openwrt"]["last_rx"], 4e9)
+        self.assertIn(["openwrt", "wan_rx_month"], saved["known_pairs"])
+
+    async def test_wan_usage_restored_from_storage(self):
+        self.coordinator.store._data = {
+            "known_pairs": [],
+            "wan_usage": {"openwrt": {"last_rx": 10, "last_tx": 20, "buckets": {}}},
+        }
+        await self.coordinator.async_setup()
+        self.assertEqual(self.coordinator._wan_usage["openwrt"].last_tx, 20)
 
     async def test_short_topic_is_ignored(self):
         await self.coordinator._async_process_message("systems/Server", "{}")
